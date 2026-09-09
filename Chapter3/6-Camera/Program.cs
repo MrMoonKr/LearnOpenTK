@@ -1,3 +1,5 @@
-using System; using System.Windows.Forms;
+using System;
+using System.Windows.Forms;
 namespace LearnOpenTK.CameraExample;
+
 internal static class Program { [STAThread] private static void Main() { ApplicationConfiguration.Initialize(); Application.Run(new MainForm()); } }

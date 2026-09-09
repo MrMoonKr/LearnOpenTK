@@ -66,3 +66,15 @@ Chapter 3의 4번 예제부터는 단순 OpenGL 호출 예제를 재사용 가�
 - `GLView`: 컨텍스트, 프레임 루프, viewport, 입력과 UI 이벤트만 담당하며 GPU 리소스의 생성은 `OnLoad`, 렌더링은 `OnRenderFrame`, 해제는 `OnUnload`에서 수행한다.
 
 초기 Chapter 1~2 예제는 학습을 위해 직접 `GL.*` 호출을 유지한다. 공용 래퍼는 Chapter 3/4 이후 예제부터 사용하며, 래퍼가 OpenGL 호출의 의미를 숨기지 않도록 README에 내부 호출과 리소스 수명을 설명한다.
+
+## Current Chapter 3 implementation rules
+
+- Chapter 3 projects 4 through 9 are independent WinForms projects and must be registered under the `Chapter3` solution folder in `LearnOpenTK.sln` as part of project creation.
+- Copy the UI behavior of `3-RenderQuad`: DPI-scaled design client/minimum sizes, File/View/Help menus, 30% Scene TreeView split, clear-color choices, VSync, status text, and `Update: ... FPS | Render: ... FPS` status display.
+- Write every `.csproj` in the multi-line, indented style used by `2-GLApp`. Do not create one-line XML project files.
+- Write C# in readable blocks. Keep using directives, fields, constructors, properties, event registration, resource lifecycle methods, rendering methods, and input handlers on separate lines and methods. Do not compress a project into one-line declarations or methods.
+- Common graphics resource names are `Buffer`, `VertexBuffer`, `IndexBuffer`, and `VertexArray`. `Mesh` owns VAO/VBO/EBO and `Material` selects a shader.
+- This repository's `Shader.SetMatrix4` uploads transposed OpenTK matrices. GLSL therefore follows the existing row-vector convention: `vec4(position, 1.0) * uModel * uView * uProjection`.
+- Lighting examples use a white albedo, per-face normals (the shared `CubeGeometry.LitVertices` format is position/color/normal), and Directional Key + Point Fill + Point Rim lighting. Light gizmos use an unlit material when added.
+- `8-KeyboardMouse` uses an orbit camera: right-button drag rotates around Target, middle-button drag pans Target and camera together, and wheel zoom changes Distance. Keep `GLView.TabStop` and call `Focus()` when input begins.
+- `9-SceneGraph` uses 10 deterministic random groups with 10 child cubes each. Parent world transforms are propagated to children; group rotation axes/speeds use a fixed random seed for reproducible output.

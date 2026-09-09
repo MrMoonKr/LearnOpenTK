@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 namespace LearnOpenTK.MeshAndMaterial;
+
 public sealed class MainForm : Form
 {
     private const int DesignDpi = 96;

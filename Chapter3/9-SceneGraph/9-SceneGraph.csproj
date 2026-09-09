@@ -4,8 +4,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
-    <RootNamespace>LearnOpenTK.KeyboardMouse</RootNamespace>
-    <AssemblyName>LearnOpenTK.KeyboardMouse</AssemblyName>
+    <RootNamespace>LearnOpenTK.SceneGraph</RootNamespace>
+    <AssemblyName>LearnOpenTK.SceneGraph</AssemblyName>
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup><None Update="Shaders\**" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
