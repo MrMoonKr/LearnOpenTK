@@ -41,3 +41,28 @@
 - `dotnet build ChapterN/순번-이름/프로젝트.csproj`가 경고와 오류 없이 성공해야 한다.
 - 외부 셰이더/텍스처 리소스가 출력 폴더에 복사되는지 확인한다.
 - 실행 화면에서 메뉴, Scene TreeView, 배경색 선택, VSync, 상태/FPS 표시와 새 렌더링 기능이 모두 동작하는지 확인한다.
+
+## Chapter 3 렌더링·애니메이션 확장 로드맵
+
+Chapter 3의 4번 예제부터는 단순 OpenGL 호출 예제를 재사용 가능한 렌더링 구성 요소로 점진적으로 확장한다. 최종 목표는 스키닝된 모델의 애니메이션 상태 전환과 간단한 월드 내 캐릭터 이동이다.
+
+1. `4-GraphicsResources`: `GlBuffer`, `VertexArray`, `Texture2D`, `ShaderProgram`의 생성·바인딩·해제를 분리한다.
+2. `5-MeshAndMaterial`: 정점/인덱스 데이터와 GPU 자원을 소유하는 `Mesh`, 셰이더·텍스처·uniform을 묶는 `Material`을 구현한다.
+3. `6-Camera`: `uModel`, `uView`, `uProjection` 및 perspective projection으로 물체 변환과 카메라 변환을 분리한다.
+4. `7-Lighting`: normal, Blinn-Phong 재질, 태양 방향광(Key)·Fill·Rim의 3점 조명을 구현한다.
+5. `8-KeyboardMouse`: orbit camera의 오른쪽 드래그 회전, 중간 드래그 패닝, 휠 줌 입력 콜백을 구현한다.
+6. `9-SceneGraph`: `Scene`, `SceneNode`, `Transform`, `Camera`, `Light`를 통해 계층 장면을 구성한다.
+7. `10-ModelLoading`: 여러 메시와 재질을 가진 모델을 로드하고 렌더링한다.
+8. `11-SkeletalAnimation`: `Skeleton`, `Bone`, `AnimationClip`, `Animator` 및 CPU linear-blend skinning을 구현한다.
+9. `12-GpuSkinning`: 본 행렬 팔레트를 GPU로 전달하여 정점 셰이더에서 skinning을 수행한다.
+10. `13-CharacterController`: Idle/Walk/Run/Jump/Fall 상태 전환, 카메라, 중력·점프·기본 충돌을 포함한 월드 이동을 구현한다.
+
+### 공용 계층의 책임
+
+- `Common.Graphics`: OpenGL 핸들과 GPU 리소스의 생성·바인딩·해제를 담당한다. `IDisposable`을 구현하며 OpenGL 컨텍스트가 유효한 `GLView.OnUnload`에서 해제한다.
+- `Common.Rendering`: `Mesh`, `Material`, `RenderState`, `Renderer`를 통해 무엇을 어떤 상태로 그릴지 담당한다.
+- `Common.Scene`: Transform과 부모-자식 관계, 카메라, 광원을 담당한다. OpenGL 호출을 직접 포함하지 않는다.
+- `Common.Animation`: skeleton, animation clip, pose 계산 및 skinning palette를 담당한다.
+- `GLView`: 컨텍스트, 프레임 루프, viewport, 입력과 UI 이벤트만 담당하며 GPU 리소스의 생성은 `OnLoad`, 렌더링은 `OnRenderFrame`, 해제는 `OnUnload`에서 수행한다.
+
+초기 Chapter 1~2 예제는 학습을 위해 직접 `GL.*` 호출을 유지한다. 공용 래퍼는 Chapter 3/4 이후 예제부터 사용하며, 래퍼가 OpenGL 호출의 의미를 숨기지 않도록 README에 내부 호출과 리소스 수명을 설명한다.
