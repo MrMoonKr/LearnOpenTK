@@ -185,5 +185,36 @@ namespace LearnOpenTK.Common
             GL.UseProgram(Handle);
             GL.Uniform3(_uniformLocations[name], data);
         }
+
+        /// <summary>
+        /// Sets a uniform mat4 array, e.g. a GPU skinning bone palette (<c>uniform mat4 uBones[N]</c>).
+        /// </summary>
+        /// <remarks>
+        /// Array uniforms are not looked up through the cached <see cref="_uniformLocations"/> dictionary,
+        /// because a driver's active-uniform list is only guaranteed to report the array's first element
+        /// (<c>name[0]</c>); GLSL guarantees the remaining elements sit at the following locations, so
+        /// <see cref="GL.UniformMatrix4(int, int, bool, float[])"/> can upload the whole array from there.
+        /// </remarks>
+        /// <param name="name">The name of the array uniform, without an index.</param>
+        /// <param name="data">The matrices to upload, transposed the same way <see cref="SetMatrix4"/> transposes a single matrix.</param>
+        public void SetMatrix4Array(string name, IReadOnlyList<Matrix4> data)
+        {
+            GL.UseProgram(Handle);
+            var location = GL.GetUniformLocation(Handle, $"{name}[0]");
+            if (location == -1) return;
+
+            var flattened = new float[data.Count * 16];
+            for (var i = 0; i < data.Count; i++)
+            {
+                var matrix = data[i];
+                var offset = i * 16;
+                flattened[offset + 0] = matrix.Row0.X; flattened[offset + 1] = matrix.Row0.Y; flattened[offset + 2] = matrix.Row0.Z; flattened[offset + 3] = matrix.Row0.W;
+                flattened[offset + 4] = matrix.Row1.X; flattened[offset + 5] = matrix.Row1.Y; flattened[offset + 6] = matrix.Row1.Z; flattened[offset + 7] = matrix.Row1.W;
+                flattened[offset + 8] = matrix.Row2.X; flattened[offset + 9] = matrix.Row2.Y; flattened[offset + 10] = matrix.Row2.Z; flattened[offset + 11] = matrix.Row2.W;
+                flattened[offset + 12] = matrix.Row3.X; flattened[offset + 13] = matrix.Row3.Y; flattened[offset + 14] = matrix.Row3.Z; flattened[offset + 15] = matrix.Row3.W;
+            }
+
+            GL.UniformMatrix4(location, data.Count, true, flattened);
+        }
     }
 }

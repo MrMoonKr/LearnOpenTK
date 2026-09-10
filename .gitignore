@@ -259,3 +259,6 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+
+# Machine-specific Dota 2 game_root path (see config.sample.ini)
+Chapter3/*/config.ini

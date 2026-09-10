@@ -31,6 +31,14 @@ public abstract class Buffer : IDisposable
         GL.BufferData(Target, data.Length * Marshal.SizeOf<T>(), data, usage);
     }
 
+    /// <summary>Overwrites a buffer created with a dynamic usage hint, e.g. CPU-skinned vertex positions recomputed every frame.</summary>
+    public void Update<T>(T[] data) where T : unmanaged
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        Bind();
+        GL.BufferSubData(Target, IntPtr.Zero, data.Length * Marshal.SizeOf<T>(), data);
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

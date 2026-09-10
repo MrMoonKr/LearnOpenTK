@@ -1,3 +1,14 @@
 using System;
 using System.Windows.Forms;
-namespace LearnOpenTK.SceneGraph; internal static class Program { [STAThread] static void Main() { ApplicationConfiguration.Initialize(); Application.Run(new MainForm()); } }
+
+namespace LearnOpenTK.SceneGraph;
+
+internal static class Program
+{
+    [STAThread]
+    private static void Main()
+    {
+        ApplicationConfiguration.Initialize();
+        Application.Run(new MainForm());
+    }
+}

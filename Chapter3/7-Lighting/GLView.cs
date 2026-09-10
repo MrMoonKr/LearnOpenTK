@@ -8,4 +8,131 @@ using LearnOpenTK.Common.Rendering;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.WinForms;
-namespace LearnOpenTK.Lighting; public sealed class GLView : GLControl { private static readonly float[] V = [-.5f, -.5f, .5f, .8f, .3f, .2f, 0, 0, 1, .5f, -.5f, .5f, .8f, .3f, .2f, 0, 0, 1, .5f, .5f, .5f, .8f, .3f, .2f, 0, 0, 1, -.5f, .5f, .5f, .8f, .3f, .2f, 0, 0, 1, .5f, -.5f, -.5f, .8f, .3f, .2f, 0, 0, -1, -.5f, -.5f, -.5f, .8f, .3f, .2f, 0, 0, -1, -.5f, .5f, -.5f, .8f, .3f, .2f, 0, 0, -1, .5f, .5f, -.5f, .8f, .3f, .2f, 0, 0, -1, -.5f, -.5f, -.5f, .8f, .3f, .2f, -1, 0, 0, -.5f, -.5f, .5f, .8f, .3f, .2f, -1, 0, 0, -.5f, .5f, .5f, .8f, .3f, .2f, -1, 0, 0, -.5f, .5f, -.5f, .8f, .3f, .2f, -1, 0, 0, .5f, -.5f, .5f, .8f, .3f, .2f, 1, 0, 0, .5f, -.5f, -.5f, .8f, .3f, .2f, 1, 0, 0, .5f, .5f, -.5f, .8f, .3f, .2f, 1, 0, 0, .5f, .5f, .5f, .8f, .3f, .2f, 1, 0, 0, -.5f, .5f, .5f, .8f, .3f, .2f, 0, 1, 0, .5f, .5f, .5f, .8f, .3f, .2f, 0, 1, 0, .5f, .5f, -.5f, .8f, .3f, .2f, 0, 1, 0, -.5f, .5f, -.5f, .8f, .3f, .2f, 0, 1, 0, -.5f, -.5f, -.5f, .8f, .3f, .2f, 0, -1, 0, .5f, -.5f, -.5f, .8f, .3f, .2f, 0, -1, 0, .5f, -.5f, .5f, .8f, .3f, .2f, 0, -1, 0, -.5f, -.5f, .5f, .8f, .3f, .2f, 0, -1, 0]; private static readonly uint[] I = [0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4, 8, 9, 10, 10, 11, 8, 12, 13, 14, 14, 15, 12, 16, 17, 18, 18, 19, 16, 20, 21, 22, 22, 23, 20]; private readonly Stopwatch _clock = Stopwatch.StartNew(); private readonly Camera _camera = new(new Vector3(0, 0, 3), 16f / 9); private Mesh? _mesh; private Material? _material; private Shader? _shader; private bool _loaded; private int _swap, _frames; private TimeSpan _sample; private Color _clear = Color.FromArgb(31, 52, 79); public GLView() { Dock = DockStyle.Fill; Load += (_, _) => LoadR(); Paint += (_, _) => Draw(); Resize += (_, _) => ResizeR(); Disposed += (_, _) => Unload(); } public event EventHandler<string>? StatusChanged; public double FramesPerSecond { get; private set; } public bool VSync { get => _swap != 0; set { _swap = value ? 1 : 0; if (_loaded && Context is not null) Context.SwapInterval = _swap; } } public Color ClearColor { get => _clear; set { _clear = value; if (_loaded) { MakeCurrent(); Clear(); Invalidate(); } } } private void LoadR() { MakeCurrent(); Clear(); GL.Enable(EnableCap.DepthTest); if (Context is not null) Context.SwapInterval = _swap; _shader = new Shader(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert"), Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag")); _material = new Material(_shader); _mesh = new Mesh(V, I, 9, 0, 3, 6); _loaded = true; _sample = _clock.Elapsed; ResizeR(); StatusChanged?.Invoke(this, "Loaded: directional Key, Fill, and Rim lights."); } private void Draw() { if (!_loaded) return; MakeCurrent(); GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit); _material!.Bind(); var t = (float)_clock.Elapsed.TotalSeconds; _shader!.SetMatrix4("uModel", Matrix4.CreateRotationY(t * .6f) * Matrix4.CreateRotationX(t * .35f)); _shader.SetMatrix4("uView", _camera.GetViewMatrix()); _shader.SetMatrix4("uProjection", _camera.GetProjectionMatrix()); _shader.SetVector3("uCameraPosition", _camera.Position); _shader.SetVector3("uSunDirection", Vector3.Normalize(new(-1, -1, -.5f))); _shader.SetVector3("uFillPosition", new(-2, 0, 2)); _shader.SetVector3("uRimPosition", new(2, 1, -1)); _mesh!.Draw(); SwapBuffers(); _frames++; var e = _clock.Elapsed - _sample; if (e.TotalSeconds >= 1) { FramesPerSecond = _frames / e.TotalSeconds; _frames = 0; _sample = _clock.Elapsed; } Invalidate(); } private void ResizeR() { if (!_loaded || ClientSize.Height == 0) return; MakeCurrent(); GL.Viewport(0, 0, ClientSize.Width, ClientSize.Height); _camera.AspectRatio = ClientSize.Width / (float)ClientSize.Height; } private void Unload() { if (!_loaded) return; MakeCurrent(); _mesh?.Dispose(); if (_shader is not null) GL.DeleteProgram(_shader.Handle); _loaded = false; } private void Clear() => GL.ClearColor(_clear.R / 255f, _clear.G / 255f, _clear.B / 255f, 1); }
+
+namespace LearnOpenTK.Lighting;
+
+public sealed class GLView : GLControl
+{
+    // Each vertex contains position (xyz), albedo color (rgb), and per-face normal (xyz).
+    private static readonly float[] Vertices =
+    [
+        -.5f, -.5f,  .5f, .8f, .3f, .2f, 0, 0, 1,   // front, normal (0, 0, 1)
+         .5f, -.5f,  .5f, .8f, .3f, .2f, 0, 0, 1,
+         .5f,  .5f,  .5f, .8f, .3f, .2f, 0, 0, 1,
+        -.5f,  .5f,  .5f, .8f, .3f, .2f, 0, 0, 1,
+         .5f, -.5f, -.5f, .8f, .3f, .2f, 0, 0, -1,  // back, normal (0, 0, -1)
+        -.5f, -.5f, -.5f, .8f, .3f, .2f, 0, 0, -1,
+        -.5f,  .5f, -.5f, .8f, .3f, .2f, 0, 0, -1,
+         .5f,  .5f, -.5f, .8f, .3f, .2f, 0, 0, -1,
+        -.5f, -.5f, -.5f, .8f, .3f, .2f, -1, 0, 0,  // left, normal (-1, 0, 0)
+        -.5f, -.5f,  .5f, .8f, .3f, .2f, -1, 0, 0,
+        -.5f,  .5f,  .5f, .8f, .3f, .2f, -1, 0, 0,
+        -.5f,  .5f, -.5f, .8f, .3f, .2f, -1, 0, 0,
+         .5f, -.5f,  .5f, .8f, .3f, .2f, 1, 0, 0,   // right, normal (1, 0, 0)
+         .5f, -.5f, -.5f, .8f, .3f, .2f, 1, 0, 0,
+         .5f,  .5f, -.5f, .8f, .3f, .2f, 1, 0, 0,
+         .5f,  .5f,  .5f, .8f, .3f, .2f, 1, 0, 0,
+        -.5f,  .5f,  .5f, .8f, .3f, .2f, 0, 1, 0,   // top, normal (0, 1, 0)
+         .5f,  .5f,  .5f, .8f, .3f, .2f, 0, 1, 0,
+         .5f,  .5f, -.5f, .8f, .3f, .2f, 0, 1, 0,
+        -.5f,  .5f, -.5f, .8f, .3f, .2f, 0, 1, 0,
+        -.5f, -.5f, -.5f, .8f, .3f, .2f, 0, -1, 0,  // bottom, normal (0, -1, 0)
+         .5f, -.5f, -.5f, .8f, .3f, .2f, 0, -1, 0,
+         .5f, -.5f,  .5f, .8f, .3f, .2f, 0, -1, 0,
+        -.5f, -.5f,  .5f, .8f, .3f, .2f, 0, -1, 0,
+    ];
+    private static readonly uint[] Indices =
+    [
+        0, 1, 2, 2, 3, 0,     // front
+        4, 5, 6, 6, 7, 4,     // back
+        8, 9, 10, 10, 11, 8,  // left
+        12, 13, 14, 14, 15, 12, // right
+        16, 17, 18, 18, 19, 16, // top
+        20, 21, 22, 22, 23, 20, // bottom
+    ];
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private readonly Camera _camera = new(new Vector3(0, 0, 3), 16f / 9);
+    private Mesh? _mesh;
+    private Material? _material;
+    private Shader? _shader;
+    private Color _clear = Color.FromArgb(31, 52, 79);
+    private TimeSpan _sample;
+    private int _swap;
+    private int _frames;
+    private bool _loaded;
+
+    public GLView()
+    {
+        Dock = DockStyle.Fill;
+        Load += (_, _) => LoadResources();
+        Paint += (_, _) => Render();
+        Resize += (_, _) => ResizeViewport();
+        Disposed += (_, _) => Unload();
+    }
+
+    public event EventHandler<string>? StatusChanged;
+    public double FramesPerSecond { get; private set; }
+    public bool VSync { get => _swap != 0; set { _swap = value ? 1 : 0; if (_loaded && Context is not null) Context.SwapInterval = _swap; } }
+    public Color ClearColor { get => _clear; set { _clear = value; if (_loaded) { MakeCurrent(); ApplyClear(); Invalidate(); } } }
+
+    private void LoadResources()
+    {
+        MakeCurrent();
+        ApplyClear();
+        GL.Enable(EnableCap.DepthTest);
+        if (Context is not null) Context.SwapInterval = _swap;
+        _shader = new Shader(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert"), Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag"));
+        _material = new Material(_shader);
+        _mesh = new Mesh(Vertices, Indices, 9, 0, 3, 6);
+        _loaded = true;
+        _sample = _clock.Elapsed;
+        ResizeViewport();
+        StatusChanged?.Invoke(this, "Loaded: directional Key, Fill, and Rim lights.");
+    }
+
+    private void Render()
+    {
+        if (!_loaded) return;
+        MakeCurrent();
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+        _material!.Bind();
+        var t = (float)_clock.Elapsed.TotalSeconds;
+        _shader!.SetMatrix4("uModel", Matrix4.CreateRotationY(t * .6f) * Matrix4.CreateRotationX(t * .35f));
+        _shader.SetMatrix4("uView", _camera.GetViewMatrix());
+        _shader.SetMatrix4("uProjection", _camera.GetProjectionMatrix());
+        _shader.SetVector3("uCameraPosition", _camera.Position);
+        _shader.SetVector3("uSunDirection", Vector3.Normalize(new(-1, -1, -.5f)));
+        _shader.SetVector3("uFillPosition", new(-2, 0, 2));
+        _shader.SetVector3("uRimPosition", new(2, 1, -1));
+        _mesh!.Draw();
+        SwapBuffers();
+        _frames++;
+        var e = _clock.Elapsed - _sample;
+        if (e.TotalSeconds >= 1)
+        {
+            FramesPerSecond = _frames / e.TotalSeconds;
+            _frames = 0;
+            _sample = _clock.Elapsed;
+        }
+        Invalidate();
+    }
+
+    private void ResizeViewport()
+    {
+        if (!_loaded || ClientSize.Height == 0) return;
+        MakeCurrent();
+        GL.Viewport(0, 0, ClientSize.Width, ClientSize.Height);
+        _camera.AspectRatio = ClientSize.Width / (float)ClientSize.Height;
+    }
+
+    private void Unload()
+    {
+        if (!_loaded) return;
+        MakeCurrent();
+        _mesh?.Dispose();
+        if (_shader is not null) GL.DeleteProgram(_shader.Handle);
+        _loaded = false;
+    }
+
+    private void ApplyClear() => GL.ClearColor(_clear.R / 255f, _clear.G / 255f, _clear.B / 255f, 1);
+}

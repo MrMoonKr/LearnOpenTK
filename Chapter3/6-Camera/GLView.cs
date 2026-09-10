@@ -8,19 +8,112 @@ using LearnOpenTK.Common.Rendering;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.WinForms;
+
 namespace LearnOpenTK.CameraExample;
 
 public sealed class GLView : GLControl
 {
-    private static readonly float[] Vertices = [-.55f, -.55f, .55f, 1f, 0f, 0f, .55f, -.55f, .55f, 1f, 1f, 0f, .55f, .55f, .55f, 1f, 1f, 1f, -.55f, .55f, .55f, 1f, 0f, 1f, -.55f, -.55f, -.55f, 0f, 0f, 1f, .55f, -.55f, -.55f, 0f, 1f, 0f, .55f, .55f, -.55f, 0f, 1f, 1f, -.55f, .55f, -.55f, 1f, 0f, 1f]; private static readonly uint[] Indices = [0, 1, 2, 2, 3, 0, 5, 4, 7, 7, 6, 5, 4, 0, 3, 3, 7, 4, 1, 5, 6, 6, 2, 1, 3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4];
-    private readonly Stopwatch _clock = Stopwatch.StartNew(); private readonly Camera _camera = new(new Vector3(0, 0, 2f), 16f / 9f) { Fov = 45f }; private Mesh? _mesh; private Material? _material; private Shader? _shader; private Color _clear = Color.FromArgb(31, 52, 79); private TimeSpan _sample; private int _frames, _swap; private bool _loaded;
-    public GLView() { Dock = DockStyle.Fill; Load += (_, _) => LoadResources(); Paint += (_, _) => Render(); Resize += (_, _) => ResizeViewport(); Disposed += (_, _) => Unload(); }
-    public event EventHandler<string>? StatusChanged; public double FramesPerSecond { get; private set; }
+    private static readonly float[] Vertices =
+    [
+        -.55f, -.55f,  .55f, 1f, 0f, 0f,
+         .55f, -.55f,  .55f, 1f, 1f, 0f,
+         .55f,  .55f,  .55f, 1f, 1f, 1f,
+        -.55f,  .55f,  .55f, 1f, 0f, 1f,
+        -.55f, -.55f, -.55f, 0f, 0f, 1f,
+         .55f, -.55f, -.55f, 0f, 1f, 0f,
+         .55f,  .55f, -.55f, 0f, 1f, 1f,
+        -.55f,  .55f, -.55f, 1f, 0f, 1f,
+    ];
+    private static readonly uint[] Indices =
+    [
+        0, 1, 2, 2, 3, 0,
+        5, 4, 7, 7, 6, 5,
+        4, 0, 3, 3, 7, 4,
+        1, 5, 6, 6, 2, 1,
+        3, 2, 6, 6, 7, 3,
+        4, 5, 1, 1, 0, 4,
+    ];
+    private readonly Stopwatch _clock = Stopwatch.StartNew();
+    private readonly Camera _camera = new(new Vector3(0, 0, 2f), 16f / 9f) { Fov = 45f };
+    private Mesh? _mesh;
+    private Material? _material;
+    private Shader? _shader;
+    private Color _clear = Color.FromArgb(31, 52, 79);
+    private TimeSpan _sample;
+    private int _frames;
+    private int _swap;
+    private bool _loaded;
+
+    public GLView()
+    {
+        Dock = DockStyle.Fill;
+        Load += (_, _) => LoadResources();
+        Paint += (_, _) => Render();
+        Resize += (_, _) => ResizeViewport();
+        Disposed += (_, _) => Unload();
+    }
+
+    public event EventHandler<string>? StatusChanged;
+    public double FramesPerSecond { get; private set; }
     public bool VSync { get => _swap != 0; set { _swap = value ? 1 : 0; if (_loaded && Context is not null) Context.SwapInterval = _swap; } }
     public Color ClearColor { get => _clear; set { _clear = value; if (_loaded) { MakeCurrent(); ApplyClear(); Invalidate(); } } }
-    private void LoadResources() { MakeCurrent(); ApplyClear(); GL.Enable(EnableCap.DepthTest); if (Context is not null) Context.SwapInterval = _swap; _shader = new Shader(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert"), Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag")); _material = new Material(_shader); _mesh = new Mesh(Vertices, Indices, 6); _loaded = true; _sample = _clock.Elapsed; ResizeViewport(); StatusChanged?.Invoke(this, "Loaded: uModel → uView → uProjection."); }
-    private void Render() { if (!_loaded || IsDisposed) return; MakeCurrent(); GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit); _material!.Bind(); var t = (float)_clock.Elapsed.TotalSeconds; _shader!.SetMatrix4("uModel", Matrix4.CreateRotationY(t * .8f) * Matrix4.CreateRotationX(t * .5f)); _shader.SetMatrix4("uView", _camera.GetViewMatrix()); _shader.SetMatrix4("uProjection", _camera.GetProjectionMatrix()); _mesh!.Draw(); SwapBuffers(); _frames++; var e = _clock.Elapsed - _sample; if (e.TotalSeconds >= 1) { FramesPerSecond = _frames / e.TotalSeconds; _frames = 0; _sample = _clock.Elapsed; } Invalidate(); }
-    private void ResizeViewport() { if (!_loaded || ClientSize.Width <= 0 || ClientSize.Height <= 0) return; MakeCurrent(); GL.Viewport(0, 0, ClientSize.Width, ClientSize.Height); _camera.AspectRatio = ClientSize.Width / (float)ClientSize.Height; }
-    private void Unload() { if (!_loaded) return; MakeCurrent(); GL.BindVertexArray(0); GL.UseProgram(0); _mesh?.Dispose(); if (_shader is not null) GL.DeleteProgram(_shader.Handle); _loaded = false; }
+
+    private void LoadResources()
+    {
+        MakeCurrent();
+        ApplyClear();
+        GL.Enable(EnableCap.DepthTest);
+        if (Context is not null) Context.SwapInterval = _swap;
+        _shader = new Shader(Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.vert"), Path.Combine(AppContext.BaseDirectory, "Shaders", "shader.frag"));
+        _material = new Material(_shader);
+        _mesh = new Mesh(Vertices, Indices, 6);
+        _loaded = true;
+        _sample = _clock.Elapsed;
+        ResizeViewport();
+        StatusChanged?.Invoke(this, "Loaded: uModel → uView → uProjection.");
+    }
+
+    private void Render()
+    {
+        if (!_loaded || IsDisposed) return;
+        MakeCurrent();
+        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+        _material!.Bind();
+        var t = (float)_clock.Elapsed.TotalSeconds;
+        _shader!.SetMatrix4("uModel", Matrix4.CreateRotationY(t * .8f) * Matrix4.CreateRotationX(t * .5f));
+        _shader.SetMatrix4("uView", _camera.GetViewMatrix());
+        _shader.SetMatrix4("uProjection", _camera.GetProjectionMatrix());
+        _mesh!.Draw();
+        SwapBuffers();
+        _frames++;
+        var e = _clock.Elapsed - _sample;
+        if (e.TotalSeconds >= 1)
+        {
+            FramesPerSecond = _frames / e.TotalSeconds;
+            _frames = 0;
+            _sample = _clock.Elapsed;
+        }
+        Invalidate();
+    }
+
+    private void ResizeViewport()
+    {
+        if (!_loaded || ClientSize.Width <= 0 || ClientSize.Height <= 0) return;
+        MakeCurrent();
+        GL.Viewport(0, 0, ClientSize.Width, ClientSize.Height);
+        _camera.AspectRatio = ClientSize.Width / (float)ClientSize.Height;
+    }
+
+    private void Unload()
+    {
+        if (!_loaded) return;
+        MakeCurrent();
+        GL.BindVertexArray(0);
+        GL.UseProgram(0);
+        _mesh?.Dispose();
+        if (_shader is not null) GL.DeleteProgram(_shader.Handle);
+        _loaded = false;
+    }
+
     private void ApplyClear() => GL.ClearColor(_clear.R / 255f, _clear.G / 255f, _clear.B / 255f, 1f);
 }
