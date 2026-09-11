@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "15-CharacterController",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-15-CharacterController",
+            "program": "${workspaceFolder}/Chapter3/15-CharacterController/bin/Debug/net10.0-windows/LearnOpenTK.CharacterController.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/Chapter3/15-CharacterController",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        }
+    ]
+}

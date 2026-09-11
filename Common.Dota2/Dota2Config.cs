@@ -21,6 +21,15 @@ public sealed class Dota2Config
     public float? CharacterSpacing { get; init; }
     public int? CharacterSeed { get; init; }
 
+    /// <summary>Only used by 15-CharacterController: the hero spawned on startup, its walk speed in world units/second, and its jump takeoff speed in world units/second.</summary>
+    public string? InitialHeroNpcName { get; init; }
+    public float? MoveSpeed { get; init; }
+    public float? JumpSpeed { get; init; }
+
+    /// <summary>Only used by 15-CharacterController: the flat ground plane's half-extent and downward gravity acceleration, both in Source hammer units.</summary>
+    public float? GroundHalfSize { get; init; }
+    public float? Gravity { get; init; }
+
     /// <summary>Parses a minimal "[section]" / "key = value" INI file. ";" starts a comment.</summary>
     public static Dota2Config Load(string path)
     {
@@ -56,6 +65,15 @@ public sealed class Dota2Config
         var characterSpacing = charactersSection is not null && charactersSection.TryGetValue("spacing", out var characterSpacingText) && float.TryParse(characterSpacingText, out var characterSpacingValue) ? characterSpacingValue : (float?)null;
         var characterSeed = charactersSection is not null && charactersSection.TryGetValue("seed", out var seedText) && int.TryParse(seedText, out var seedValue) ? seedValue : (int?)null;
 
+        sections.TryGetValue("character", out var characterSection);
+        var initialHeroNpcName = characterSection is not null && characterSection.TryGetValue("initial_hero", out var initialHeroText) ? initialHeroText : null;
+        var moveSpeed = characterSection is not null && characterSection.TryGetValue("move_speed", out var moveSpeedText) && float.TryParse(moveSpeedText, out var moveSpeedValue) ? moveSpeedValue : (float?)null;
+        var jumpSpeed = characterSection is not null && characterSection.TryGetValue("jump_speed", out var jumpSpeedText) && float.TryParse(jumpSpeedText, out var jumpSpeedValue) ? jumpSpeedValue : (float?)null;
+
+        sections.TryGetValue("world", out var worldSection);
+        var groundHalfSize = worldSection is not null && worldSection.TryGetValue("ground_half_size", out var groundHalfSizeText) && float.TryParse(groundHalfSizeText, out var groundHalfSizeValue) ? groundHalfSizeValue : (float?)null;
+        var gravity = worldSection is not null && worldSection.TryGetValue("gravity", out var gravityText) && float.TryParse(gravityText, out var gravityValue) ? gravityValue : (float?)null;
+
         return new Dota2Config
         {
             GameRoot = gameRoot,
@@ -67,6 +85,11 @@ public sealed class Dota2Config
             CharacterCount = characterCount,
             CharacterSpacing = characterSpacing,
             CharacterSeed = characterSeed,
+            InitialHeroNpcName = initialHeroNpcName,
+            MoveSpeed = moveSpeed,
+            JumpSpeed = jumpSpeed,
+            GroundHalfSize = groundHalfSize,
+            Gravity = gravity,
         };
     }
 }

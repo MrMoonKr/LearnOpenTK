@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using LearnOpenTK.Common.Animation;
 using ValveResourceFormat.IO;
@@ -11,8 +12,17 @@ using VModel = ValveResourceFormat.ResourceTypes.Model;
 using VTexture = ValveResourceFormat.ResourceTypes.Texture;
 using VrfBone = ValveResourceFormat.ResourceTypes.ModelAnimation.Bone;
 using VrfSkeleton = ValveResourceFormat.ResourceTypes.ModelAnimation.Skeleton;
+using VSequenceAnimation = ValveResourceFormat.ResourceTypes.ModelAnimation.SequenceAnimation;
 
 namespace LearnOpenTK.Common.Dota2;
+
+/// <summary>
+/// One raw Source-1-style acttable entry a clip carries (e.g. Name "ACT_DOTA_IDLE"). Weight is the
+/// original acttable's selection weight - when several clips share the same activity (e.g. multiple
+/// idle variants), the game picks among them more often in proportion to this value, so it is also a
+/// reasonable signal for which one is the "main" variant vs. a rare/alternate one.
+/// </summary>
+public readonly record struct HeroAnimationActivity(string Name, int Weight);
 
 /// <summary>A loaded Source 2 model: its geometry (already interleaved for GPU upload), skeleton, and animation clips.</summary>
 public sealed class ModelAsset
@@ -23,6 +33,14 @@ public sealed class ModelAsset
     public Skeleton? Skeleton { get; init; }
     public required IReadOnlyDictionary<string, AnimationClip> Animations { get; init; }
 
+    /// <summary>
+    /// Each clip's raw Source-1-style activity entries (e.g. "ACT_DOTA_IDLE"), used by
+    /// <see cref="HeroAnimationClassifier"/> to infer idle/run/attack clips without guessing purely
+    /// from clip-name keywords. Empty for a clip if it carries no activity data - real Dota 2 assets do
+    /// not populate this for every clip, so it is a hint, not a complete taxonomy.
+    /// </summary>
+    public required IReadOnlyDictionary<string, IReadOnlyList<HeroAnimationActivity>> AnimationActivities { get; init; }
+
     /// <summary>Loads a model's highest-detail LOD: geometry, skeleton (if any), and every animation clip.</summary>
     public static ModelAsset Load(GameArchive archive, string modelPath)
     {
@@ -31,9 +49,9 @@ public sealed class ModelAsset
         var model = (VModel)resource.DataBlock!;
 
         var skeleton = ImportSkeleton(model.Skeleton);
-        var animations = ImportAnimations(model, archive.FileLoader, skeleton);
+        var (animations, activities) = ImportAnimations(model, archive.FileLoader, skeleton);
         var subMeshes = ImportSubMeshes(model, archive.FileLoader);
-        return new ModelAsset { SubMeshes = subMeshes, Skeleton = skeleton, Animations = animations };
+        return new ModelAsset { SubMeshes = subMeshes, Skeleton = skeleton, Animations = animations, AnimationActivities = activities };
     }
 
     private static Skeleton? ImportSkeleton(VrfSkeleton vrfSkeleton)
@@ -52,10 +70,11 @@ public sealed class ModelAsset
         return new Skeleton(bones);
     }
 
-    private static Dictionary<string, AnimationClip> ImportAnimations(VModel model, IFileLoader fileLoader, Skeleton? skeleton)
+    private static (Dictionary<string, AnimationClip> Clips, Dictionary<string, IReadOnlyList<HeroAnimationActivity>> Activities) ImportAnimations(VModel model, IFileLoader fileLoader, Skeleton? skeleton)
     {
         var clips = new Dictionary<string, AnimationClip>(StringComparer.OrdinalIgnoreCase);
-        if (skeleton is null) return clips;
+        var activities = new Dictionary<string, IReadOnlyList<HeroAnimationActivity>>(StringComparer.OrdinalIgnoreCase);
+        if (skeleton is null) return (clips, activities);
 
         var vrfSkeleton = model.Skeleton;
         foreach (var animation in model.GetAllAnimations(fileLoader))
@@ -79,9 +98,12 @@ public sealed class ModelAsset
             }
 
             clips[animation.Name] = new AnimationClip(animation.Name, BakedFrameRate, frames);
+            activities[animation.Name] = animation is VSequenceAnimation sequence
+                ? sequence.Activities.Select(a => new HeroAnimationActivity(a.Name, a.Weight)).ToList()
+                : [];
         }
 
-        return clips;
+        return (clips, activities);
     }
 
     private static List<SubMesh> ImportSubMeshes(VModel model, IFileLoader fileLoader)

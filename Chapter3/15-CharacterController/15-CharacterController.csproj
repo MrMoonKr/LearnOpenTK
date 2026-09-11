@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <RootNamespace>LearnOpenTK.CharacterController</RootNamespace>
+    <AssemblyName>LearnOpenTK.CharacterController</AssemblyName>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Update="Shaders\**" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="config.sample.ini" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="config.ini" CopyToOutputDirectory="PreserveNewest" Condition="Exists('config.ini')" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenTK" Version="4.8.2" />
+    <PackageReference Include="OpenTK.GLControl" Version="4.0.0" />
+    <ProjectReference Include="..\..\Common\Common.csproj" />
+    <ProjectReference Include="..\..\Common.Dota2\Common.Dota2.csproj" />
+  </ItemGroup>
+</Project>
